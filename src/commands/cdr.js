@@ -1,15 +1,15 @@
 /**
  * /cdr_N
- * @module bot/commands/listen-cdr
+ * @module bot/commands/cdr
  */
 const path = require('path');
 const NError = require('nerror');
 const { Markup } = require('telegraf');
 
 /**
- * Listen CDR command class
+ * CDR command class
  */
-class ListenCdrCommand {
+class CdrCommand {
     /**
      * Create the module
      * @param {App} app                                     The application
@@ -27,11 +27,11 @@ class ListenCdrCommand {
     }
 
     /**
-     * Service name is 'bot.commands.listenCdr'
+     * Service name is 'bot.commands.cdr'
      * @type {string}
      */
     static get provides() {
-        return 'bot.commands.listenCdr';
+        return 'bot.commands.cdr';
     }
 
     /**
@@ -107,7 +107,7 @@ class ListenCdrCommand {
                 );
             }
         } catch (error) {
-            await this.onError(ctx, 'ListenCdrCommand.process()', error);
+            await this.onError(ctx, 'CdrCommand.process()', error);
         }
         return true;
     }
@@ -141,4 +141,4 @@ class ListenCdrCommand {
     }
 }
 
-module.exports = ListenCdrCommand;
+module.exports = CdrCommand;

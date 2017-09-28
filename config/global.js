@@ -4,9 +4,9 @@
 module.exports = {
     // Load module classes and services, path names
     autoload: [
-        'module.js',
-        'models',
-        'repositories',
-        'commands',
+        'src/module.js',
+        'src/models',
+        'src/repositories',
+        'src/commands',
     ],
 };
