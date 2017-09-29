@@ -53,6 +53,10 @@ class AllCallsCommand {
         return 'all_calls';
     }
 
+    /**
+     * Syntax getter
+     * @type {Array}
+     */
     get syntax() {
         return [
             [/^\/all_calls(.*)$/i],
@@ -62,75 +66,14 @@ class AllCallsCommand {
         ];
     }
 
-    async print(ctx, when, date) {
-        try {
-            let rows = await this._cdrRepo.getAllCalls(date);
-            let processed = new Set();
-            let result = [];
-
-            for (let i = 0; i < rows.length; i++) {
-                if (processed.has(i) || (rows[i].src.length <= 3 && rows[i].dst.length <= 3))
-                    continue;
-
-                let calls = [];
-
-                let call = this._getCall(rows, i);
-                calls.push(call);
-                processed.add(i);
-
-                if (rows[i].src.length > 3 && !this._config.get('servers.bot.my_numbers').includes(rows[i].src)) {
-                    for (let j = i + 1; j < rows.length; j++) {
-                        if (rows[j].src === rows[i].src || rows[j].dst === rows[i].src) {
-                            let call = this._getCall(rows, j);
-                            calls.push(call);
-                            processed.add(j);
-                        }
-                    }
-                }
-
-                result.push(calls);
-            }
-
-            if (result.length) {
-                for (let i = 0; i < result.length; i++) {
-                    if (!result[i].length)
-                        continue;
-
-                    let reply = '';
-                    let highlight = result[i][0].src;
-                    for (let j = 0; j < result[i].length; j++) {
-                        reply += result[i][j].time;
-                        reply += ': ';
-                        if (result[i][j].src === highlight)
-                            reply += '<b>';
-                        reply += result[i][j].src;
-                        if (result[i][j].src === highlight)
-                            reply += '</b>';
-                        reply += ' → ';
-                        if (result[i][j].dst === highlight)
-                            reply += '<b>';
-                        reply += result[i][j].dst;
-                        if (result[i][j].dst === highlight)
-                            reply += '</b>';
-                        reply += ', ';
-                        reply += result[i][j].disp === 'ANSWERED'
-                            ? `${result[i][j].dur} сек.`
-                            : result[i][j].disp.toLowerCase();
-                        reply += ' ';
-                        if (result[i][j].disp === 'ANSWERED')
-                            reply += `/cdr_${result[i][j].id.replace('.', '_')}`;
-                        reply += '\n';
-                    }
-                    await ctx.replyWithHTML(reply.trim());
-                }
-            } else {
-                await ctx.reply(when + ' звонков не было');
-            }
-        } catch (error) {
-            await this.onError(ctx, 'AllCallsCommand.print()', error);
-        }
-    }
-
+    /**
+     * Process command
+     * @param {Commander} commander
+     * @param {object} ctx
+     * @param {Array} match
+     * @param {object} scene
+     * @return {Promise}
+     */
     async process(commander, ctx, match, scene) {
         try {
             this._logger.debug(this.name, 'Processing');
@@ -144,38 +87,21 @@ class AllCallsCommand {
                 return true;
             }
 
-            let when, date;
             if ((match[0] && !match[0][0][1].trim()) || match[3]) {
-                ctx.calendar.setDateListener(async (ctx, date) => {
-                    when = date;
-                    date = moment(date + ' 00:00:00');
-                    if (moment.isMoment(date))
-                        await this.print(ctx, when, date);
-                });
-                ctx.reply('Выберите дату', ctx.calendar.getCalendar());
+                ctx.reply('Выберите дату', this._getCalendar());
             } else {
+                let date;
                 if (match[0]) {
-                    date = match[0][0][1].trim();
-                    if (date === 'today') {
-                        when = 'Сегодня';
-                        date = moment();
-                    } else if (date === 'yesterday') {
-                        when = 'Вчера';
-                        date = moment().subtract(1, 'days');
-                    } else if (date.length) {
-                        when = date;
-                        date = moment(date + ' 00:00:00');
-                        if (!moment.isMoment(date))
-                            return false;
-                    }
+                    date = moment(match[0][0][1].trim());
+                    if (!moment.isMoment(date))
+                        return false;
                 } else if (match[1]) {
-                    when = 'Сегодня';
                     date = moment();
                 } else if (match[2]) {
-                    when = 'Вчера';
                     date = moment().subtract(1, 'days');
                 }
-                await this.print(ctx, when, date);
+                date = date.format('YYYY-MM-DD');
+                await this.sendPage(ctx, 1, date);
             }
         } catch (error) {
             await this.onError(ctx, 'AllCallsCommand.process()', error);
@@ -212,21 +138,71 @@ class AllCallsCommand {
     }
 
     /**
-     * Serialize call model
-     * @param {CDRModel[]} calls                            Array of models
-     * @param {number} index                                Target index in the array
+     * Send page
      * @return {object}
      */
-    _getCall(calls, index) {
-        return {
-            index: index + 1,
-            id: calls[index].id,
-            time: calls[index].calldate.format('HH:mm:ss'),
-            disp: calls[index].disposition,
-            src: calls[index].src,
-            dst: calls[index].dst,
-            dur: calls[index].duration,
+    async sendPage(ctx, page, date) {
+        if (this._pager)
+            return this._pager.sendPage(ctx, page, date);
+
+        this._pager = this._app.get('allCallsPager');
+        this._pager.search = async (page, extra) => {
+            try {
+                let date = moment(extra);
+
+                let infoOnly = !page;
+                let calls = await this._cdrRepo.getAllCalls(date, infoOnly, page, 20);
+                if (infoOnly) {
+                    calls.enablePager = true;
+                    return calls;
+                }
+
+                if (calls.data.length) {
+                    let result = `${extra} (страница ${page}):\n\n`;
+                    for (let i = 0; i < calls.data.length; i++) {
+                        result += calls.data[i].calldate.format('HH:mm:ss');
+                        result += ': ';
+                        result += calls.data[i].src;
+                        result += ' → ';
+                        result += calls.data[i].dst;
+                        result += ', ';
+                        result += calls.data[i].disposition === 'ANSWERED'
+                            ? `${calls.data[i].duration} сек.`
+                            : calls.data[i].disposition.toLowerCase();
+                        result += ' ';
+                        if (calls.data[i].disposition === 'ANSWERED')
+                            result += `/cdr_${calls.data[i].id.replace('.', '_')}`;
+                        result += '\n';
+                    }
+                    calls.message = result.trim();
+                    calls.enablePager = true;
+                    return calls;
+                } else {
+                    calls.message = date.format('YYYY-MM-DD') + ' звонков не было';
+                    calls.enablePager = false;
+                    return calls;
+                }
+            } catch (error) {
+                await this.onError(ctx, 'AllCallsCommand.print()', error);
+            }
         };
+
+        return this._pager.sendPage(ctx, page, date);
+    }
+
+    /**
+     * Retrieve all calls calendar
+     * @return {object}
+     */
+    _getCalendar() {
+        if (this._calendar)
+            return this._calendar.getCalendar();
+
+        this._calendar = this._app.get('allCallsCalendar');
+        this._calendar.setDateListener(async (ctx, date) => {
+            await this.sendPage(ctx, 1, date);
+        });
+        return this._calendar.getCalendar();
     }
 }
 

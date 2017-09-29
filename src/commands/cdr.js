@@ -56,12 +56,24 @@ class CdrCommand {
         return 'cdr';
     }
 
+    /**
+     * Syntax getter
+     * @type {Array}
+     */
     get syntax() {
         return [
             [/^\/cdr_([0-9_]+)$/i],
         ];
     }
 
+    /**
+     * Process command
+     * @param {Commander} commander
+     * @param {object} ctx
+     * @param {Array} match
+     * @param {object} scene
+     * @return {Promise}
+     */
     async process(commander, ctx, match, scene) {
         try {
             this._logger.debug(this.name, 'Processing');

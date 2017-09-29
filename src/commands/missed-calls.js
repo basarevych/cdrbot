@@ -52,6 +52,10 @@ class MissedCallsCommand {
         return 'missed_calls';
     }
 
+    /**
+     * Syntax getter
+     * @type {Array}
+     */
     get syntax() {
         return [
             [/^\/missed_calls$/i],
@@ -59,6 +63,14 @@ class MissedCallsCommand {
         ];
     }
 
+    /**
+     * Process command
+     * @param {Commander} commander
+     * @param {object} ctx
+     * @param {Array} match
+     * @param {object} scene
+     * @return {Promise}
+     */
     async process(commander, ctx, match, scene) {
         try {
             this._logger.debug(this.name, 'Processing');
@@ -72,32 +84,7 @@ class MissedCallsCommand {
                 return true;
             }
 
-            let calls = await this._cdrRepo.getMissedCalls();
-            let result;
-            if (calls.length) {
-                result = 'Пропущенные сегодня:\n\n';
-                for (let i = 0; i < calls.length; i++) {
-                    result += '<pre>';
-                    result += String(i + 1).padStart(3, ' ');
-                    result += ': ';
-                    result += calls[i].calldate.format('HH:mm:ss');
-                    result += ', ';
-                    result += calls[i].src;
-                    result += ' → ';
-                    result += calls[i].dst;
-                    result += ', ';
-                    result += calls[i].disposition.toLowerCase();
-                    result += '</pre>';
-                    if (result.split('\n').length >= 30 && i < calls.length - 1) {
-                        await ctx.replyWithHTML(result.trim());
-                        result = '';
-                    }
-                    result += '\n';
-                }
-            } else {
-                result = 'Сегодня еще не было пропущенных звонков';
-            }
-            await ctx.replyWithHTML(result.trim());
+            await this.sendPage(ctx, 1);
         } catch (error) {
             await this.onError(ctx, 'MissedCallsCommand.process()', error);
         }
@@ -130,6 +117,54 @@ class MissedCallsCommand {
         } catch (error) {
             // do nothing
         }
+    }
+
+    /**
+     * Send page
+     * @return {object}
+     */
+    async sendPage(ctx, page) {
+        if (this._pager)
+            return this._pager.sendPage(ctx, page);
+
+        this._pager = this._app.get('missedCallsPager');
+        this._pager.search = async page => {
+            try {
+                let infoOnly = !page;
+                let calls = await this._cdrRepo.getMissedCalls(infoOnly, page, 20);
+                if (infoOnly) {
+                    calls.enablePager = true;
+                    return calls;
+                }
+
+                let result;
+                if (calls.data.length) {
+                    result = `Пропущенные сегодня (страница ${page}):\n\n`;
+                    for (let i = 0; i < calls.data.length; i++) {
+                        result += '<pre>';
+                        result += calls.data[i].calldate.format('HH:mm:ss');
+                        result += ', ';
+                        result += calls.data[i].src;
+                        result += ' → ';
+                        result += calls.data[i].dst;
+                        result += ', ';
+                        result += calls.data[i].disposition.toLowerCase();
+                        result += '</pre>';
+                        result += '\n';
+                    }
+                    calls.message = result.trim();
+                    calls.enablePager = true;
+                } else {
+                    calls.message = 'Сегодня еще не было пропущенных звонков';
+                    calls.enablePager = false;
+                }
+                return calls;
+            } catch (error) {
+                await this.onError(ctx, 'MissedCallsCommand.sendPage()', error);
+            }
+        };
+
+        return this._pager.sendPage(ctx, page);
     }
 }
 
