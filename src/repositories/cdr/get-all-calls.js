@@ -34,8 +34,12 @@ module.exports = async function (date, infoOnly, pageNumber, pageSize, mysql) {
         ];
         let dstLimit = this._app.get('config').get('servers.bot.cdr.dst_limit');
         if (dstLimit && dstLimit.length) {
-            where.push('dst IN ?');
-            params.push(dstLimit);
+            let ors = [];
+            for (let dst of dstLimit) {
+                ors.push('dst = ?');
+                params.push(dst);
+            }
+            where.push(ors.join(' OR '));
         }
 
         let result = await this.search(
