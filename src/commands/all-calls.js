@@ -170,7 +170,7 @@ class AllCallsCommand {
                             ? `${calls.data[i].duration} сек.`
                             : calls.data[i].disposition.toLowerCase();
                         result += ' ';
-                        if (calls.data[i].disposition === 'ANSWERED')
+                        if (calls.data[i].disposition === 'ANSWERED' && calls.data[i].recordingfile)
                             result += `/cdr_${calls.data[i].id.replace('.', '_')}`;
                         result += '\n';
                     }
