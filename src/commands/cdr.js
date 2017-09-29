@@ -98,28 +98,30 @@ class CdrCommand {
                 return false;
 
             let buffer = null;
-            let recordsPath = this._config.get('servers.bot.cdr.records_path');
-            let remoteHost = this._config.get('servers.bot.cdr.remote_host');
-            let remoteSftp = this._config.get('servers.bot.cdr.remote_sftp');
-            if (remoteHost && remoteSftp) {
-                buffer = await this._download(
-                    remoteHost,
-                    remoteSftp,
-                    recordsPath,
-                    call.recordingfile
-                );
-            } else {
-                await this._filer.process(
-                    recordsPath,
-                    async filename => {
-                        if (path.basename(filename) === call.recordingfile)
-                            buffer = await this._filer.lockReadBuffer(filename);
-                        return !buffer;
-                    },
-                    async () => {
-                        return !buffer;
-                    }
-                );
+            if (call.recordingfile) {
+                let recordsPath = this._config.get('servers.bot.cdr.records_path');
+                let remoteHost = this._config.get('servers.bot.cdr.remote_host');
+                let remoteSftp = this._config.get('servers.bot.cdr.remote_sftp');
+                if (remoteHost && remoteSftp) {
+                    buffer = await this._download(
+                        remoteHost,
+                        remoteSftp,
+                        recordsPath,
+                        call.recordingfile
+                    );
+                } else {
+                    await this._filer.process(
+                        recordsPath,
+                        async filename => {
+                            if (path.basename(filename) === call.recordingfile)
+                                buffer = await this._filer.lockReadBuffer(filename);
+                            return !buffer;
+                        },
+                        async () => {
+                            return !buffer;
+                        }
+                    );
+                }
             }
             if (!buffer) {
                 await ctx.reply('Файл не найден');
