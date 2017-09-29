@@ -95,7 +95,7 @@ class CdrCommand {
 
             let buffer = null;
             await this._filer.process(
-                this._config.get('servers.bot.records_path'),
+                this._config.get('servers.bot.cdr.records_path'),
                 async filename => {
                     if (path.basename(filename) === call.recordingfile)
                         buffer = await this._filer.lockReadBuffer(filename);
