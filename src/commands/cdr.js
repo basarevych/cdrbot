@@ -5,6 +5,7 @@
 const path = require('path');
 const NError = require('nerror');
 const { Markup } = require('telegraf');
+const { Client } = require('ssh2');
 
 /**
  * CDR command class
@@ -16,13 +17,15 @@ class CdrCommand {
      * @param {object} config                               Configuration
      * @param {Logger} logger                               Logger service
      * @param {Filer} filer                                 Filer service
+     * @param {Util} util                                   Util service
      * @param {CdrRepository} cdrRepo                       CDR repository
      */
-    constructor(app, config, logger, filer, cdrRepo) {
+    constructor(app, config, logger, filer, util, cdrRepo) {
         this._app = app;
         this._config = config;
         this._logger = logger;
         this._filer = filer;
+        this._util = util;
         this._cdrRepo = cdrRepo;
     }
 
@@ -44,6 +47,7 @@ class CdrCommand {
             'config',
             'logger',
             'filer',
+            'util',
             'repositories.cdr',
         ];
     }
@@ -94,17 +98,29 @@ class CdrCommand {
                 return false;
 
             let buffer = null;
-            await this._filer.process(
-                this._config.get('servers.bot.cdr.records_path'),
-                async filename => {
-                    if (path.basename(filename) === call.recordingfile)
-                        buffer = await this._filer.lockReadBuffer(filename);
-                    return !buffer;
-                },
-                async () => {
-                    return !buffer;
-                }
-            );
+            let recordsPath = this._config.get('servers.bot.cdr.records_path');
+            let remoteHost = this._config.get('servers.bot.cdr.remote_host');
+            let remoteSftp = this._config.get('servers.bot.cdr.remote_sftp');
+            if (remoteHost && remoteSftp) {
+                buffer = await this._download(
+                    remoteHost,
+                    remoteSftp,
+                    recordsPath,
+                    call.recordingfile
+                );
+            } else {
+                await this._filer.process(
+                    recordsPath,
+                    async filename => {
+                        if (path.basename(filename) === call.recordingfile)
+                            buffer = await this._filer.lockReadBuffer(filename);
+                        return !buffer;
+                    },
+                    async () => {
+                        return !buffer;
+                    }
+                );
+            }
             if (!buffer) {
                 await ctx.reply('Файл не найден');
             } else {
@@ -150,6 +166,88 @@ class CdrCommand {
         } catch (error) {
             // do nothing
         }
+    }
+
+    async _download(remoteHost, remoteSftp, recordsPath, name) {
+        let tmpFile = '/tmp/' + this._util.getRandomString(32);
+        let downloaded = await new Promise((resolve, reject) => {
+            let conn1 = new Client();
+            let conn2 = new Client();
+
+            conn1.on('ready', () => {
+                this._logger.debug(this.name, 'FIRST :: connection ready');
+                conn1.exec(`nc ${remoteSftp.host} ${remoteSftp.port}`, (error, stream) => {
+                    if (error) {
+                        reject(new NError(error, 'CdrCommand._download()'));
+                        return conn1.end();
+                    }
+                    conn2.connect({
+                        sock: stream,
+                        username: remoteSftp.username,
+                        password: remoteSftp.password,
+                    });
+                });
+            }).connect({
+                host: remoteHost.host,
+                port: remoteHost.port,
+                username: remoteHost.username,
+                password: remoteHost.password,
+            });
+
+            conn2.on('ready', () => {
+                this._logger.debug(this.name, 'SECOND :: connection ready');
+                conn2.exec(
+                    'find',
+                    [
+                        recordsPath,
+                        '-name', name
+                    ],
+                    (error, stream) => {
+                        if (error) {
+                            reject(new NError(error, 'CdrCommand._download()'));
+                            conn2.end();
+                            return conn1.end();
+                        }
+                        let result = '';
+                        stream.on('end', () => {
+                            if (!result.trim().length) {
+                                conn2.end();
+                                conn1.end();
+                                return resolve(false);
+                            }
+
+                            this._logger.debug(this.name, `DOWNLOAD ${result}`);
+                            conn2.sftp((error, sftp) => {
+                                if (error) {
+                                    reject(new NError(error, 'CdrCommand._download()'));
+                                    conn2.end();
+                                    return conn1.end();
+                                }
+                                sftp.fastGet(result, tmpFile, error => {
+                                    if (error) {
+                                        reject(new NError(error, 'CdrCommand._download()'));
+                                        conn2.end();
+                                        return conn1.end();
+                                    }
+                                    conn2.end();
+                                    conn1.end();
+                                    resolve(true);
+                                });
+                            });
+                        }).on('data', data => {
+                            result = data.toString();
+                        });
+                    }
+                );
+            });
+        });
+
+        let buffer = null;
+        if (downloaded) {
+            buffer = await this._filer.lockReadBuffer(tmpFile);
+            await this._filer.remove(tmpFile);
+        }
+        return buffer;
     }
 }
 
