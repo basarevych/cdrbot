@@ -163,8 +163,8 @@ class AllCallsCommand {
                 if (calls.data.length) {
                     let result = `${extra} (страница ${page}):\n\n`;
                     for (let i = 0; i < calls.data.length; i++) {
-                        result += calls.data[i].calldate.format('HH:mm:ss');
-                        result += ': ';
+                        result += calls.data[i].calldate.format('DD.MM HH:mm');
+                        result += ' ';
                         result += calls.data[i].src;
                         result += ' → ';
                         result += calls.data[i].dst;

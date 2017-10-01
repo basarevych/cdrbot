@@ -131,7 +131,7 @@ class CdrCommand {
                         source: buffer,
                     },
                     {
-                        performer: call.src,
+                        performer: `${call.src} → ${call.dst}`,
                         title: call.calldate.format('YYYY-MM-DD HH:mm:ss'),
                     }
                 );

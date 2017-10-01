@@ -141,15 +141,13 @@ class MissedCallsCommand {
                 if (calls.data.length) {
                     result = `Пропущенные сегодня (страница ${page}):\n\n`;
                     for (let i = 0; i < calls.data.length; i++) {
-                        result += '<pre>';
-                        result += calls.data[i].calldate.format('HH:mm:ss');
-                        result += ', ';
+                        result += calls.data[i].calldate.format('DD.MM HH:mm');
+                        result += ' ';
                         result += calls.data[i].src;
                         result += ' → ';
                         result += calls.data[i].dst;
                         result += ', ';
                         result += calls.data[i].disposition.toLowerCase();
-                        result += '</pre>';
                         result += '\n';
                     }
                     calls.message = result.trim();
