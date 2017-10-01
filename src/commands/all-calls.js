@@ -146,8 +146,11 @@ class AllCallsCommand {
             return this._pager.sendPage(ctx, page, date);
 
         this._pager = this._app.get('allCallsPager');
-        this._pager.search = async (page, extra) => {
+        this._pager.search = async (ctx, page, extra) => {
             try {
+                if (!ctx.user.authorized || !ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+                    return { enablePager: false };
+
                 let date = moment(extra);
 
                 let infoOnly = !page;
@@ -199,9 +202,12 @@ class AllCallsCommand {
             return this._calendar.getCalendar();
 
         this._calendar = this._app.get('allCallsCalendar');
-        this._calendar.setDateListener(async (ctx, date) => {
+        this._calendar.handler = async (ctx, date) => {
+            if (!ctx.user.authorized || !ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+                return;
+
             await this.sendPage(ctx, 1, date);
-        });
+        };
         return this._calendar.getCalendar();
     }
 }
