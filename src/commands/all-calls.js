@@ -4,7 +4,6 @@
  */
 const moment = require('moment-timezone');
 const NError = require('nerror');
-const { Markup } = require('telegraf');
 
 /**
  * All calls command class
@@ -55,58 +54,64 @@ class AllCallsCommand {
 
     /**
      * Syntax getter
-     * @type {Array}
+     * @type {object}
      */
     get syntax() {
-        return [
-            [/^\/all_calls(.*)$/i],
-            [/все/i, /звонки/i, /за +сегодня/i],
-            [/все/i, /звонки/i, /за +вчера/i],
-            [/все/i, /звонки/i, /за +дату/i]
-        ];
+        return {
+            all: {
+                main: /^\/all_calls(.*)$/i,
+            },
+        };
     }
 
     /**
      * Process command
      * @param {Commander} commander
      * @param {object} ctx
-     * @param {Array} match
      * @param {object} scene
      * @return {Promise}
      */
-    async process(commander, ctx, match, scene) {
+    async process(commander, ctx, scene) {
         try {
             this._logger.debug(this.name, 'Processing');
 
-            if (!ctx.user.authorized)
+            if (!ctx.user.authorized || commander.hasAll(ctx.session.locale, ctx.message.text, 'пропущенные'))
+                return false;
+
+            let match = commander.match(ctx.message.text, this.syntax);
+            let today = commander.hasAll(ctx.session.locale, ctx.message.text, 'звонки за сегодня');
+            let yesterday = commander.hasAll(ctx.session.locale, ctx.message.text, 'звонки за вчера');
+            let when = commander.hasAll(ctx.session.locale, ctx.message.text, 'звонки за дату');
+            if (!match && !today && !yesterday && !when)
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply('В доступе отказано');
+                await ctx.reply(ctx.i18n('acl_denied'));
                 await scene.sendMenu(ctx);
                 return true;
             }
 
-            if ((match[0] && !match[0][0][1].trim()) || match[3]) {
-                ctx.reply('Выберите дату', this._getCalendar());
+            if ((match && !match.all.main[1].trim()) || when) {
+                ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
             } else {
                 let date;
-                if (match[0]) {
-                    date = moment(match[0][0][1].trim());
+                if (match) {
+                    date = moment(match.all.main[1].trim());
                     if (!moment.isMoment(date))
                         return false;
-                } else if (match[1]) {
+                } else if (today) {
                     date = moment();
-                } else if (match[2]) {
+                } else if (yesterday) {
                     date = moment().subtract(1, 'days');
                 }
                 date = date.format('YYYY-MM-DD');
                 await this.sendPage(ctx, 1, date);
             }
+            return true;
         } catch (error) {
-            await this.onError(ctx, 'AllCallsCommand.process()', error);
+            this._logger.error(new NError(error, { ctx }, 'AllCallsCommand.process()'));
         }
-        return true;
+        return false;
     }
 
     /**
@@ -116,25 +121,6 @@ class AllCallsCommand {
      */
     async register(server) {
         server.commander.add(this);
-    }
-
-    /**
-     * Log error
-     * @param {object} ctx                                  Context object
-     * @param {string} where                                Error location
-     * @param {Error} error                                 The error
-     * @return {Promise}
-     */
-    async onError(ctx, where, error) {
-        try {
-            this._logger.error(new NError(error, where));
-            await ctx.replyWithHTML(
-                `<i>Произошла ошибка. Пожалуйста, попробуйте повторить позднее.</i>`,
-                Markup.removeKeyboard().extra()
-            );
-        } catch (error) {
-            // do nothing
-        }
     }
 
     /**
@@ -161,7 +147,7 @@ class AllCallsCommand {
                 }
 
                 if (calls.data.length) {
-                    let result = `${extra} (страница ${page}):\n\n`;
+                    let result = `${extra} (${ctx.i18n('page_number', { num: page })}):\n\n`;
                     for (let i = 0; i < calls.data.length; i++) {
                         result += calls.data[i].calldate.format('DD.MM HH:mm');
                         result += ' ';
@@ -170,7 +156,7 @@ class AllCallsCommand {
                         result += calls.data[i].dst;
                         result += ', ';
                         result += calls.data[i].disposition === 'ANSWERED'
-                            ? `${calls.data[i].duration} сек.`
+                            ? `${calls.data[i].duration} ${ctx.i18n('seconds_short')}`
                             : calls.data[i].disposition.toLowerCase();
                         result += ' ';
                         if (calls.data[i].disposition === 'ANSWERED' && calls.data[i].recordingfile)
@@ -181,12 +167,12 @@ class AllCallsCommand {
                     calls.enablePager = true;
                     return calls;
                 } else {
-                    calls.message = date.format('YYYY-MM-DD') + ' звонков не было';
+                    calls.message = ctx.i18n('no_calls', { date: date.format('YYYY-MM-DD') });
                     calls.enablePager = false;
                     return calls;
                 }
             } catch (error) {
-                await this.onError(ctx, 'AllCallsCommand.print()', error);
+                this._logger.error(new NError(error, { ctx }, 'AllCallsCommand.sendPage()'));
             }
         };
 
@@ -197,9 +183,9 @@ class AllCallsCommand {
      * Retrieve all calls calendar
      * @return {object}
      */
-    _getCalendar() {
+    _getCalendar(ctx) {
         if (this._calendar)
-            return this._calendar.getCalendar();
+            return this._calendar.getCalendar(ctx);
 
         this._calendar = this._app.get('allCallsCalendar');
         this._calendar.handler = async (ctx, date) => {
@@ -208,7 +194,7 @@ class AllCallsCommand {
 
             await this.sendPage(ctx, 1, date);
         };
-        return this._calendar.getCalendar();
+        return this._calendar.getCalendar(ctx);
     }
 }
 

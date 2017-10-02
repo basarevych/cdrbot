@@ -9,4 +9,9 @@ module.exports = {
         'src/repositories',
         'src/commands',
     ],
+
+    // Translation directories
+    i18n: [
+        'src/i18n',
+    ],
 };

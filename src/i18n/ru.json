@@ -1,0 +1,114 @@
+{
+  "acl_denied": {
+    "message": "В доступе отказано",
+    "description": "ACL denied access"
+  },
+  "choose_date": {
+    "message": "Выберите дату",
+    "description": "Ask user to choose a date"
+  },
+  "page_number": {
+    "message": "страница {num}",
+    "description": "Page number information"
+  },
+  "seconds_short": {
+    "message": "сек.",
+    "description": "Short form of seconds unit name"
+  },
+  "no_calls": {
+    "message": "{date} звонков не было",
+    "description": "Message stating there were no calls at this date"
+  },
+  "no_missed_calls": {
+    "message": "Сегодня еще не было пропущенных звонков",
+    "description": "Message stating there were no missed calls today"
+  },
+  "file_not_found": {
+    "message": "Файл не найден",
+    "description": "Message stating that file is absent in file system"
+  },
+  "missed_calls_title": {
+    "message": "Пропущенные сегодня",
+    "description": "Title for missed calls page"
+  },
+  "start_week_day": {
+    "message": "1",
+    "description": "0 for Sunday, 1 for Monday"
+  },
+  "sunday_short": {
+    "message": "Вс",
+    "description": "Sunday short form"
+  },
+  "monday_short": {
+    "message": "Пн",
+    "description": "Monday short form"
+  },
+  "tuesday_short": {
+    "message": "Вт",
+    "description": "Tuesday short form"
+  },
+  "wednesday_short": {
+    "message": "Ср",
+    "description": "Wednesday short form"
+  },
+  "thursday_short": {
+    "message": "Чт",
+    "description": "Thursday short form"
+  },
+  "friday_short": {
+    "message": "Пт",
+    "description": "Friday short form"
+  },
+  "saturday_short": {
+    "message": "Сб",
+    "description": "Saturday short form"
+  },
+  "january_short": {
+    "message": "Янв",
+    "description": "January short form"
+  },
+  "february_short": {
+    "message": "Фев",
+    "description": "February short form"
+  },
+  "march_short": {
+    "message": "Мар",
+    "description": "March short form"
+  },
+  "april_short": {
+    "message": "Апр",
+    "description": "April short form"
+  },
+  "may_short": {
+    "message": "Май",
+    "description": "May short form"
+  },
+  "june_short": {
+    "message": "Июн",
+    "description": "June short form"
+  },
+  "july_short": {
+    "message": "Июл",
+    "description": "July short form"
+  },
+  "august_short": {
+    "message": "Авг",
+    "description": "August short form"
+  },
+  "september_short": {
+    "message": "Сен",
+    "description": "September short form"
+  },
+  "october_short": {
+    "message": "Окт",
+    "description": "October short form"
+  },
+  "november_short": {
+    "message": "Ноя",
+    "description": "November short form"
+  },
+  "december_short": {
+    "message": "Дек",
+    "description": "December short form"
+  }
+}

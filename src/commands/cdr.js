@@ -4,7 +4,6 @@
  */
 const path = require('path');
 const NError = require('nerror');
-const { Markup } = require('telegraf');
 const { Client } = require('ssh2');
 
 /**
@@ -62,36 +61,41 @@ class CdrCommand {
 
     /**
      * Syntax getter
-     * @type {Array}
+     * @type {object}
      */
     get syntax() {
-        return [
-            [/^\/cdr_([0-9_]+)$/i],
-        ];
+        return {
+            cdr: {
+                main: /^\/cdr_([0-9_]+)$/i,
+            }
+        };
     }
 
     /**
      * Process command
      * @param {Commander} commander
      * @param {object} ctx
-     * @param {Array} match
      * @param {object} scene
      * @return {Promise}
      */
-    async process(commander, ctx, match, scene) {
+    async process(commander, ctx, scene) {
         try {
             this._logger.debug(this.name, 'Processing');
 
             if (!ctx.user.authorized)
                 return false;
 
+            let match = commander.match(ctx.message.text, this.syntax);
+            if (!match)
+                return false;
+
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply('В доступе отказано');
+                await ctx.reply(ctx.i18n('acl_denied'));
                 await scene.sendMenu(ctx);
                 return true;
             }
 
-            let id = match[0][0][1].replace('_', '.');
+            let id = match.cdr.main[1].replace('_', '.');
             let calls = await this._cdrRepo.find(id);
             let call = calls.length && calls[0];
             if (!call)
@@ -124,7 +128,7 @@ class CdrCommand {
                 }
             }
             if (!buffer) {
-                await ctx.reply('Файл не найден');
+                await ctx.reply(ctx.i18n('file_not_found'));
             } else {
                 await ctx.replyWithAudio(
                     {
@@ -136,10 +140,11 @@ class CdrCommand {
                     }
                 );
             }
+            return true;
         } catch (error) {
-            await this.onError(ctx, 'CdrCommand.process()', error);
+            this._logger.error(new NError(error, { ctx }, 'CdrCommand.process()'));
         }
-        return true;
+        return false;
     }
 
     /**
@@ -149,25 +154,6 @@ class CdrCommand {
      */
     async register(server) {
         server.commander.add(this);
-    }
-
-    /**
-     * Log error
-     * @param {object} ctx                                  Context object
-     * @param {string} where                                Error location
-     * @param {Error} error                                 The error
-     * @return {Promise}
-     */
-    async onError(ctx, where, error) {
-        try {
-            this._logger.error(new NError(error, where));
-            await ctx.replyWithHTML(
-                `<i>Произошла ошибка. Пожалуйста, попробуйте повторить позднее.</i>`,
-                Markup.removeKeyboard().extra()
-            );
-        } catch (error) {
-            // do nothing
-        }
     }
 
     async _download(remoteHost, remoteSftp, recordsPath, name) {

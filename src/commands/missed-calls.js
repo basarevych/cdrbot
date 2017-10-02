@@ -3,7 +3,6 @@
  * @module bot/commands/missed-calls
  */
 const NError = require('nerror');
-const { Markup } = require('telegraf');
 
 /**
  * Missed calls command class
@@ -54,41 +53,46 @@ class MissedCallsCommand {
 
     /**
      * Syntax getter
-     * @type {Array}
+     * @type {object}
      */
     get syntax() {
-        return [
-            [/^\/missed_calls$/i],
-            [/пропущенные/i, /звонки/i],
-        ];
+        return {
+            missed: {
+                main: /^\/missed_calls$/i
+            },
+        };
     }
 
     /**
      * Process command
      * @param {Commander} commander
      * @param {object} ctx
-     * @param {Array} match
      * @param {object} scene
      * @return {Promise}
      */
-    async process(commander, ctx, match, scene) {
+    async process(commander, ctx, scene) {
         try {
             this._logger.debug(this.name, 'Processing');
 
             if (!ctx.user.authorized)
                 return false;
 
+            let match = commander.match(ctx.message.text, this.syntax);
+            if (!match && !commander.hasAll(ctx.session.locale, ctx.message.text, 'пропущенные звонки'))
+                return false;
+
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply('В доступе отказано');
+                await ctx.reply(ctx.i18n('acl_denied'));
                 await scene.sendMenu(ctx);
                 return true;
             }
 
             await this.sendPage(ctx, 1);
+            return true;
         } catch (error) {
-            await this.onError(ctx, 'MissedCallsCommand.process()', error);
+            this._logger.error(new NError(error, { ctx }, 'MissedCallsCommand.process()'));
         }
-        return true;
+        return false;
     }
 
     /**
@@ -98,25 +102,6 @@ class MissedCallsCommand {
      */
     async register(server) {
         server.commander.add(this);
-    }
-
-    /**
-     * Log error
-     * @param {object} ctx                                  Context object
-     * @param {string} where                                Error location
-     * @param {Error} error                                 The error
-     * @return {Promise}
-     */
-    async onError(ctx, where, error) {
-        try {
-            this._logger.error(new NError(error, where));
-            await ctx.replyWithHTML(
-                `<i>Произошла ошибка. Пожалуйста, попробуйте повторить позднее.</i>`,
-                Markup.removeKeyboard().extra()
-            );
-        } catch (error) {
-            // do nothing
-        }
     }
 
     /**
@@ -139,7 +124,7 @@ class MissedCallsCommand {
 
                 let result;
                 if (calls.data.length) {
-                    result = `Пропущенные сегодня (страница ${page}):\n\n`;
+                    result = `${ctx.i18n('missed_calls_title')} (${ctx.i18n('page_number', { num: page })}):\n\n`;
                     for (let i = 0; i < calls.data.length; i++) {
                         result += calls.data[i].calldate.format('DD.MM HH:mm');
                         result += ' ';
@@ -153,12 +138,12 @@ class MissedCallsCommand {
                     calls.message = result.trim();
                     calls.enablePager = true;
                 } else {
-                    calls.message = 'Сегодня еще не было пропущенных звонков';
+                    calls.message = ctx.i18n('no_missed_calls');
                     calls.enablePager = false;
                 }
                 return calls;
             } catch (error) {
-                await this.onError(ctx, 'MissedCallsCommand.sendPage()', error);
+                this._logger.error(new NError(error, { ctx }, 'MissedCallsCommand.sendPage()'));
             }
         };
 
