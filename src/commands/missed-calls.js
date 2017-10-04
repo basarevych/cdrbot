@@ -1,5 +1,5 @@
 /**
- * /missed
+ * Missed calls
  * @module bot/commands/missed-calls
  */
 const NError = require('nerror');

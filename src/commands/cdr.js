@@ -1,5 +1,5 @@
 /**
- * /cdr_N
+ * Play CDR file
  * @module bot/commands/cdr
  */
 const path = require('path');
