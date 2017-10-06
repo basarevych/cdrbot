@@ -42,7 +42,7 @@ module.exports = async function (date, infoOnly, pageNumber, pageSize, mysql) {
             where.push(ors.join(' OR '));
         }
 
-        let result = await this.search(
+        return await this.search(
             {
                 where: where,
                 params: params,
@@ -53,8 +53,6 @@ module.exports = async function (date, infoOnly, pageNumber, pageSize, mysql) {
             },
             mysql || 'cdr'
         );
-        result.data = this.getModel(result.data);
-        return result;
     } catch (error) {
         throw new NError(error, 'CdrRepository.getAllCalls()');
     }

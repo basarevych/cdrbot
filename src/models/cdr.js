@@ -3,7 +3,7 @@
  * @module models/cdr
  */
 const moment = require('moment-timezone');
-const BaseModel = require('arpen/src/models/base');
+const BaseModel = require('arpen/src/models/mysql');
 
 /**
  * CDR model class
@@ -16,6 +16,7 @@ class CdrModel extends BaseModel {
      */
     constructor(mysql, util) {
         super(mysql, util);
+
         this.calldate = undefined;
         this.src = undefined;
         this.dst = undefined;
@@ -30,14 +31,6 @@ class CdrModel extends BaseModel {
      */
     static get provides() {
         return 'models.cdr';
-    }
-
-    /**
-     * Dependencies as constructor arguments
-     * @type {string[]}
-     */
-    static get requires() {
-        return [ 'mysql', 'util' ];
     }
 
     /**
