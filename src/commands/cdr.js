@@ -52,11 +52,19 @@ class CdrCommand {
     }
 
     /**
-     * Command name
+     * Command name [_a-z0-9]
      * @type {string}
      */
     get name() {
         return 'cdr';
+    }
+
+    /**
+     * Command priority
+     * @type {number}
+     */
+    get priority() {
+        return 100;
     }
 
     /**
@@ -82,16 +90,12 @@ class CdrCommand {
         try {
             this._logger.debug(this.name, 'Processing');
 
-            if (!ctx.user.authorized)
-                return false;
-
             let match = commander.match(ctx.message.text, this.syntax);
             if (!match)
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'));
-                await scene.sendMenu(ctx);
+                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
                 return true;
             }
 
@@ -128,7 +132,7 @@ class CdrCommand {
                 }
             }
             if (!buffer) {
-                await ctx.reply(ctx.i18n('file_not_found'));
+                await ctx.reply(ctx.i18n('file_not_found'), scene.getBottomKeyboard(ctx));
             } else {
                 await ctx.replyWithAudio(
                     {
@@ -153,7 +157,7 @@ class CdrCommand {
      * @return {Promise}
      */
     async register(server) {
-        server.commander.add(this);
+        server.commander.addCommand(this);
     }
 
     async _download(remoteHost, remoteSftp, recordsPath, name) {

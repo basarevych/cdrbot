@@ -44,11 +44,19 @@ class MissedCallsCommand {
     }
 
     /**
-     * Command name
+     * Command name [_a-z0-9]
      * @type {string}
      */
     get name() {
         return 'missed_calls';
+    }
+
+    /**
+     * Command priority
+     * @type {number}
+     */
+    get priority() {
+        return 110;
     }
 
     /**
@@ -64,6 +72,31 @@ class MissedCallsCommand {
     }
 
     /**
+     * Menu action
+     * @param {Commander} commander
+     * @param {object} ctx
+     * @param {object} scene
+     * @return {Promise}
+     */
+    async action(commander, ctx, scene) {
+        try {
+            this._logger.debug(this.name, 'Action');
+
+            if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+                return;
+
+            let extra = ctx.match[2];
+            switch (extra) {
+                case 'today':
+                    await this.sendPage(ctx, 1);
+                    break;
+            }
+        } catch (error) {
+            this._logger.error(new NError(error, { ctx }, 'MissedCallsCommand.action()'));
+        }
+    }
+
+    /**
      * Process command
      * @param {Commander} commander
      * @param {object} ctx
@@ -74,16 +107,14 @@ class MissedCallsCommand {
         try {
             this._logger.debug(this.name, 'Processing');
 
-            if (!ctx.user.authorized)
-                return false;
-
             let match = commander.match(ctx.message.text, this.syntax);
-            if (!match && !commander.hasAll(ctx.session.locale, ctx.message.text, 'пропущенные звонки'))
+            if (!match &&
+                !commander.hasAll(ctx.session.locale, ctx.message.text, 'пропущенные') &&
+                !commander.hasAny(ctx.session.locale, ctx.message.text, 'сегодня звонки'))
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'));
-                await scene.sendMenu(ctx);
+                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
                 return true;
             }
 
@@ -101,7 +132,7 @@ class MissedCallsCommand {
      * @return {Promise}
      */
     async register(server) {
-        server.commander.add(this);
+        server.commander.addCommand(this);
     }
 
     /**

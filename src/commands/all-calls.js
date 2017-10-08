@@ -45,11 +45,19 @@ class AllCallsCommand {
     }
 
     /**
-     * Command name
+     * Command name [_a-z0-9]
      * @type {string}
      */
     get name() {
         return 'all_calls';
+    }
+
+    /**
+     * Command priority
+     * @type {number}
+     */
+    get priority() {
+        return 100;
     }
 
     /**
@@ -65,6 +73,37 @@ class AllCallsCommand {
     }
 
     /**
+     * Menu action
+     * @param {Commander} commander
+     * @param {object} ctx
+     * @param {object} scene
+     * @return {Promise}
+     */
+    async action(commander, ctx, scene) {
+        try {
+            this._logger.debug(this.name, 'Action');
+
+            if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+                return;
+
+            let extra = ctx.match[2];
+            switch (extra) {
+                case 'today':
+                    await this.sendPage(ctx, 1, moment().format('YYYY-MM-DD'));
+                    break;
+                case 'yesterday':
+                    await this.sendPage(ctx, 1, moment().subtract(1, 'days').format('YYYY-MM-DD'));
+                    break;
+                case 'date':
+                    await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
+                    break;
+            }
+        } catch (error) {
+            this._logger.error(new NError(error, { ctx }, 'AllCallsCommand.action()'));
+        }
+    }
+
+    /**
      * Process command
      * @param {Commander} commander
      * @param {object} ctx
@@ -75,9 +114,6 @@ class AllCallsCommand {
         try {
             this._logger.debug(this.name, 'Processing');
 
-            if (!ctx.user.authorized || commander.hasAll(ctx.session.locale, ctx.message.text, 'пропущенные'))
-                return false;
-
             let match = commander.match(ctx.message.text, this.syntax);
             let today = commander.hasAll(ctx.session.locale, ctx.message.text, 'звонки за сегодня');
             let yesterday = commander.hasAll(ctx.session.locale, ctx.message.text, 'звонки за вчера');
@@ -86,13 +122,12 @@ class AllCallsCommand {
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'));
-                await scene.sendMenu(ctx);
+                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
                 return true;
             }
 
             if ((match && !match.all.main[1].trim()) || when) {
-                ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
+                await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
             } else {
                 let date;
                 if (match) {
@@ -120,7 +155,7 @@ class AllCallsCommand {
      * @return {Promise}
      */
     async register(server) {
-        server.commander.add(this);
+        server.commander.addCommand(this);
     }
 
     /**
@@ -134,7 +169,7 @@ class AllCallsCommand {
         this._pager = this._app.get('allCallsPager');
         this._pager.search = async (ctx, page, extra) => {
             try {
-                if (!ctx.user.authorized || !ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+                if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
                     return { enablePager: false };
 
                 let date = moment(extra);
@@ -189,7 +224,7 @@ class AllCallsCommand {
 
         this._calendar = this._app.get('allCallsCalendar');
         this._calendar.handler = async (ctx, date) => {
-            if (!ctx.user.authorized || !ctx.user.isAllowed(this._app.get('acl').get('cdr')))
+            if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
                 return;
 
             await this.sendPage(ctx, 1, date);
