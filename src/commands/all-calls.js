@@ -89,13 +89,13 @@ class AllCallsCommand {
             let extra = ctx.match[2];
             switch (extra) {
                 case 'today':
-                    await this.sendPage(ctx, 1, moment().format('YYYY-MM-DD'));
+                    await this.sendPage(ctx, scene, 1, moment().format('YYYY-MM-DD'));
                     break;
                 case 'yesterday':
-                    await this.sendPage(ctx, 1, moment().subtract(1, 'days').format('YYYY-MM-DD'));
+                    await this.sendPage(ctx, scene, 1, moment().subtract(1, 'days').format('YYYY-MM-DD'));
                     break;
                 case 'date':
-                    await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
+                    await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx, scene));
                     break;
             }
         } catch (error) {
@@ -127,7 +127,7 @@ class AllCallsCommand {
             }
 
             if ((match && !match.all.main[1].trim()) || when) {
-                await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx));
+                await ctx.reply(ctx.i18n('choose_date'), this._getCalendar(ctx, scene));
             } else {
                 let date;
                 if (match) {
@@ -140,7 +140,7 @@ class AllCallsCommand {
                     date = moment().subtract(1, 'days');
                 }
                 date = date.format('YYYY-MM-DD');
-                await this.sendPage(ctx, 1, date);
+                await this.sendPage(ctx, scene, 1, date);
             }
             return true;
         } catch (error) {
@@ -160,26 +160,34 @@ class AllCallsCommand {
 
     /**
      * Send page
+     * @param {object} ctx
+     * @param {object} scene
+     * @param {number} page
+     * @param {string} date
      * @return {object}
      */
-    async sendPage(ctx, page, date) {
+    async sendPage(ctx, scene, page, date) {
         if (this._pager)
-            return this._pager.sendPage(ctx, page, date);
+            return this._pager.sendPage(ctx, scene, page, date);
 
-        this._pager = this._app.get('allCallsPager');
-        this._pager.search = async (ctx, page, extra) => {
+        this._pager = this._app.get('telegram.services.pager');
+        this._pager.prefix = 'all-calls-pager';
+
+        this._pager.search = async (ctx, scene, page, extra) => {
             try {
-                if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
-                    return { enablePager: false };
+                if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
+                    return {
+                        message: ctx.i18n('acl_denied'),
+                        keyboard: scene.getBottomKeyboard(ctx),
+                    };
+                }
 
                 let date = moment(extra);
 
                 let infoOnly = !page;
                 let calls = await this._cdrRepo.getAllCalls(date, infoOnly, page, 20);
-                if (infoOnly) {
-                    calls.enablePager = true;
+                if (infoOnly)
                     return calls;
-                }
 
                 if (calls.data.length) {
                     let result = `${extra} (${ctx.i18n('page_number', { num: page })}):\n\n`;
@@ -199,11 +207,10 @@ class AllCallsCommand {
                         result += '\n';
                     }
                     calls.message = result.trim();
-                    calls.enablePager = true;
                     return calls;
                 } else {
                     calls.message = ctx.i18n('no_calls', { date: date.format('YYYY-MM-DD') });
-                    calls.enablePager = false;
+                    calls.keyboard = scene.getBottomKeyboard(ctx);
                     return calls;
                 }
             } catch (error) {
@@ -211,25 +218,29 @@ class AllCallsCommand {
             }
         };
 
-        return this._pager.sendPage(ctx, page, date);
+        return this._pager.sendPage(ctx, scene, page, date);
     }
 
     /**
      * Retrieve all calls calendar
+     * @param {object} ctx
+     * @param {object} scene
      * @return {object}
      */
-    _getCalendar(ctx) {
+    _getCalendar(ctx, scene) {
         if (this._calendar)
-            return this._calendar.getCalendar(ctx);
+            return this._calendar.getCalendar(ctx, scene);
 
-        this._calendar = this._app.get('allCallsCalendar');
-        this._calendar.handler = async (ctx, date) => {
+        this._calendar = this._app.get('telegram.services.calendar');
+        this._calendar.prefix = 'all-calls-calendar';
+
+        this._calendar.handler = async (ctx, scene, date) => {
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
-                return;
+                return await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
 
-            await this.sendPage(ctx, 1, date);
+            await this.sendPage(ctx, scene, 1, date);
         };
-        return this._calendar.getCalendar(ctx);
+        return this._calendar.getCalendar(ctx, scene);
     }
 }
 

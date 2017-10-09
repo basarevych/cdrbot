@@ -88,7 +88,7 @@ class MissedCallsCommand {
             let extra = ctx.match[2];
             switch (extra) {
                 case 'today':
-                    await this.sendPage(ctx, 1);
+                    await this.sendPage(ctx, scene, 1);
                     break;
             }
         } catch (error) {
@@ -118,7 +118,7 @@ class MissedCallsCommand {
                 return true;
             }
 
-            await this.sendPage(ctx, 1);
+            await this.sendPage(ctx, scene, 1);
             return true;
         } catch (error) {
             this._logger.error(new NError(error, { ctx }, 'MissedCallsCommand.process()'));
@@ -137,21 +137,31 @@ class MissedCallsCommand {
 
     /**
      * Send page
+     * @param {object} ctx
+     * @param {object} scene
+     * @param {number} page
      * @return {object}
      */
-    async sendPage(ctx, page) {
+    async sendPage(ctx, scene, page) {
         if (this._pager)
-            return this._pager.sendPage(ctx, page);
+            return this._pager.sendPage(ctx, scene, page);
 
-        this._pager = this._app.get('missedCallsPager');
-        this._pager.search = async page => {
+        this._pager = this._app.get('telegram.services.pager');
+        this._pager.prefix = 'missed-calls-pager';
+
+        this._pager.search = async (ctx, scene, page, extra) => {
             try {
+                if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
+                    return {
+                        message: ctx.i18n('acl_denied'),
+                        keyboard: scene.getBottomKeyboard(ctx),
+                    };
+                }
+
                 let infoOnly = !page;
                 let calls = await this._cdrRepo.getMissedCalls(infoOnly, page, 20);
-                if (infoOnly) {
-                    calls.enablePager = true;
+                if (infoOnly)
                     return calls;
-                }
 
                 let result;
                 if (calls.data.length) {
@@ -167,10 +177,9 @@ class MissedCallsCommand {
                         result += '\n';
                     }
                     calls.message = result.trim();
-                    calls.enablePager = true;
                 } else {
                     calls.message = ctx.i18n('no_missed_calls');
-                    calls.enablePager = false;
+                    calls.keyboard = scene.getBottomKeyboard(ctx);
                 }
                 return calls;
             } catch (error) {
@@ -178,7 +187,7 @@ class MissedCallsCommand {
             }
         };
 
-        return this._pager.sendPage(ctx, page);
+        return this._pager.sendPage(ctx, scene, page);
     }
 }
 
