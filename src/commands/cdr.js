@@ -217,9 +217,9 @@ class CdrCommand {
                                 }
                                 sftp.fastGet(result, tmpFile, error => {
                                     if (error) {
-                                        reject(new NError(error, 'CdrCommand._download()'));
                                         conn2.end();
-                                        return conn1.end();
+                                        conn1.end();
+                                        return resolve(false);
                                     }
                                     conn2.end();
                                     conn1.end();
