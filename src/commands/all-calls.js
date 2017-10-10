@@ -207,12 +207,13 @@ class AllCallsCommand {
                         result += '\n';
                     }
                     calls.message = result.trim();
-                    return calls;
+                    if (calls.totalPages === 1)
+                        calls.keyboard = scene.getBottomKeyboard(ctx);
                 } else {
                     calls.message = ctx.i18n('no_calls', { date: date.format('YYYY-MM-DD') });
                     calls.keyboard = scene.getBottomKeyboard(ctx);
-                    return calls;
                 }
+                return calls;
             } catch (error) {
                 this._logger.error(new NError(error, { ctx }, 'AllCallsCommand.sendPage()'));
             }

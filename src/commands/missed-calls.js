@@ -177,6 +177,8 @@ class MissedCallsCommand {
                         result += '\n';
                     }
                     calls.message = result.trim();
+                    if (calls.totalPages === 1)
+                        calls.keyboard = scene.getBottomKeyboard(ctx);
                 } else {
                     calls.message = ctx.i18n('no_missed_calls');
                     calls.keyboard = scene.getBottomKeyboard(ctx);
