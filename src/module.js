@@ -6,7 +6,7 @@
 /**
  * Module main class
  */
-class CdrBot {
+class CdrBotModule {
     /**
      * Create the module
      * @param {App} app                                     The application
@@ -37,4 +37,4 @@ class CdrBot {
     }
 }
 
-module.exports = CdrBot;
+module.exports = CdrBotModule;
