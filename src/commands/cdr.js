@@ -29,11 +29,11 @@ class CdrCommand {
     }
 
     /**
-     * Service name is 'bot.commands.cdr'
+     * Service name is 'cdrbot.commands.cdr'
      * @type {string}
      */
     static get provides() {
-        return 'bot.commands.cdr';
+        return 'cdrbot.commands.cdr';
     }
 
     /**

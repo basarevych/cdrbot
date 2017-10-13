@@ -24,11 +24,11 @@ class AllCallsCommand {
     }
 
     /**
-     * Service name is 'bot.commands.allCalls'
+     * Service name is 'cdrbot.commands.allCalls'
      * @type {string}
      */
     static get provides() {
-        return 'bot.commands.allCalls';
+        return 'cdrbot.commands.allCalls';
     }
 
     /**

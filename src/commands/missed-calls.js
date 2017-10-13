@@ -23,11 +23,11 @@ class MissedCallsCommand {
     }
 
     /**
-     * Service name is 'bot.commands.missedCalls'
+     * Service name is 'cdrbot.commands.missedCalls'
      * @type {string}
      */
     static get provides() {
-        return 'bot.commands.missedCalls';
+        return 'cdrbot.commands.missedCalls';
     }
 
     /**
