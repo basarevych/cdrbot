@@ -95,7 +95,7 @@ class CdrCommand {
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
+                await ctx.reply(ctx.i18n('acl_denied'), await scene.getBottomKeyboard(ctx));
                 return true;
             }
 
@@ -132,7 +132,7 @@ class CdrCommand {
                 }
             }
             if (!buffer) {
-                await ctx.reply(ctx.i18n('file_not_found'), scene.getBottomKeyboard(ctx));
+                await ctx.reply(ctx.i18n('file_not_found'), await scene.getBottomKeyboard(ctx));
             } else {
                 await ctx.replyWithAudio(
                     {

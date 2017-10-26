@@ -114,7 +114,7 @@ class MissedCallsCommand {
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
+                await ctx.reply(ctx.i18n('acl_denied'), await scene.getBottomKeyboard(ctx));
                 return true;
             }
 
@@ -154,7 +154,7 @@ class MissedCallsCommand {
                 if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
                     return {
                         message: ctx.i18n('acl_denied'),
-                        keyboard: scene.getBottomKeyboard(ctx),
+                        keyboard: await scene.getBottomKeyboard(ctx),
                     };
                 }
 
@@ -178,10 +178,10 @@ class MissedCallsCommand {
                     }
                     calls.message = result.trim();
                     if (calls.totalPages === 1)
-                        calls.keyboard = scene.getBottomKeyboard(ctx);
+                        calls.keyboard = await scene.getBottomKeyboard(ctx);
                 } else {
                     calls.message = ctx.i18n('no_missed_calls');
-                    calls.keyboard = scene.getBottomKeyboard(ctx);
+                    calls.keyboard = await scene.getBottomKeyboard(ctx);
                 }
                 return calls;
             } catch (error) {

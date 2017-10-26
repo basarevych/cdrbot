@@ -122,7 +122,7 @@ class AllCallsCommand {
                 return false;
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
-                await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
+                await ctx.reply(ctx.i18n('acl_denied'), await scene.getBottomKeyboard(ctx));
                 return true;
             }
 
@@ -178,7 +178,7 @@ class AllCallsCommand {
                 if (!ctx.user.isAllowed(this._app.get('acl').get('cdr'))) {
                     return {
                         message: ctx.i18n('acl_denied'),
-                        keyboard: scene.getBottomKeyboard(ctx),
+                        keyboard: await scene.getBottomKeyboard(ctx),
                     };
                 }
 
@@ -208,10 +208,10 @@ class AllCallsCommand {
                     }
                     calls.message = result.trim();
                     if (calls.totalPages === 1)
-                        calls.keyboard = scene.getBottomKeyboard(ctx);
+                        calls.keyboard = await scene.getBottomKeyboard(ctx);
                 } else {
                     calls.message = ctx.i18n('no_calls', { date: date.format('YYYY-MM-DD') });
-                    calls.keyboard = scene.getBottomKeyboard(ctx);
+                    calls.keyboard = await scene.getBottomKeyboard(ctx);
                 }
                 return calls;
             } catch (error) {
@@ -237,7 +237,7 @@ class AllCallsCommand {
 
         this._calendar.handler = async (ctx, scene, date) => {
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
-                return await ctx.reply(ctx.i18n('acl_denied'), scene.getBottomKeyboard(ctx));
+                return await ctx.reply(ctx.i18n('acl_denied'), await scene.getBottomKeyboard(ctx));
 
             await this.sendPage(ctx, scene, 1, date);
         };
