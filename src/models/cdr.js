@@ -17,12 +17,15 @@ class CdrModel extends BaseModel {
     constructor(mysql, util) {
         super(mysql, util);
 
-        this.calldate = undefined;
-        this.src = undefined;
-        this.dst = undefined;
-        this.duration = undefined;
-        this.disposition = undefined;
-        this.recordingfile = undefined;
+        this._removeField('id', 'id');
+
+        this._addField('uniqueid', 'id');
+        this._addField('calldate', 'calldate');
+        this._addField('src', 'src');
+        this._addField('dst', 'dst');
+        this._addField('duration', 'duration');
+        this._addField('disposition', 'disposition');
+        this._addField('recordingfile', 'recordingfile');
     }
 
     /**
@@ -46,22 +49,6 @@ class CdrModel extends BaseModel {
      * @type {undefined|string}
      */
     get id() {
-        return this._getField('uniqueid');
-    }
-
-    /**
-     * ID alias setter
-     * @type {undefined|string}
-     */
-    set uniqueid(id) {
-        return this._setField('uniqueid', id);
-    }
-
-    /**
-     * ID alias getter
-     * @type {undefined|string}
-     */
-    get uniqueid() {
         return this._getField('uniqueid');
     }
 

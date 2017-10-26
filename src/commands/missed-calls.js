@@ -80,7 +80,7 @@ class MissedCallsCommand {
      */
     async action(commander, ctx, scene) {
         try {
-            this._logger.debug(this.name, 'Action');
+            this._logger.debug(this.name, `Action ${ctx.from.id}`);
 
             if (!ctx.user.isAllowed(this._app.get('acl').get('cdr')))
                 return;
@@ -105,7 +105,7 @@ class MissedCallsCommand {
      */
     async process(commander, ctx, scene) {
         try {
-            this._logger.debug(this.name, 'Processing');
+            this._logger.debug(this.name, `Processing ${ctx.from.id}`);
 
             let match = commander.match(ctx.message.text, this.syntax);
             if (!match &&

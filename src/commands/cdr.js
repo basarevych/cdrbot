@@ -88,7 +88,7 @@ class CdrCommand {
      */
     async process(commander, ctx, scene) {
         try {
-            this._logger.debug(this.name, 'Processing');
+            this._logger.debug(this.name, `Processing ${ctx.from.id}`);
 
             let match = commander.match(ctx.message.text, this.syntax);
             if (!match)
